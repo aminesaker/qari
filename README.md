@@ -1,56 +1,77 @@
-# Welcome to your Expo app 👋
+# Qari — réciter le Coran avec correction vocale (iPhone + Android)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Application gratuite, sans compte ni publicité. On choisit une sourate, on récite, et les mots
+se colorent en direct : **vert** = reconnu, **rouge** = autre mot entendu, **orange souligné** = oublié.
+Le mode **Masquer** cache le texte et le révèle au fur et à mesure (révision de la mémorisation).
 
-## Get started
+La reconnaissance vocale tourne **entièrement sur le téléphone** (hors ligne, rien n'est envoyé,
+aucun coût serveur).
 
-1. Install dependencies
+## Comment c'est construit
 
-   ```bash
-   npm install
-   ```
+| Brique | Rôle |
+|---|---|
+| Expo / React Native (SDK 58) | une seule base de code pour iOS et Android |
+| `whisper.rn` (whisper.cpp) | exécute le modèle de reconnaissance sur le téléphone |
+| `tarteel-ai/whisper-base-ar-quran` (Apache-2.0) | modèle Whisper entraîné sur la récitation du Coran, converti et compressé (55 Mo) |
+| Silero VAD | détecte quand tu parles pour découper l'audio |
+| Tanzil (texte uthmani, CC BY 3.0) | texte affiché, non modifié |
+| `src/lib/matcher.ts` | moteur maison qui aligne ce qui est entendu avec le texte attendu |
 
-2. Start the app
+Le moteur gère les différences d'orthographe uthmani / moderne, les lettres isolées
+(« alif lam mim »), les répétitions (revenir en arrière n'est pas une faute) et la correction
+d'un mot relu. Testé sur tout le Coran : 0,01 % de fausses fautes sur un texte parfait.
 
-   ```bash
-   npx expo start
-   ```
+## Lancer l'appli sur ton téléphone
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+L'appli contient du code natif (le modèle vocal) : **elle ne marche pas dans Expo Go**.
+Il faut faire un build, dans le cloud avec EAS (pas besoin de Mac ni d'Android Studio).
 
 ```bash
-npm run reset-project
+npm install
+npx eas-cli@latest login          # compte Expo gratuit
+npx eas-cli@latest build:configure
+# Android : un .apk à installer directement sur le téléphone
+npx eas-cli@latest build --platform android --profile preview
+# iPhone : nécessite un compte Apple Developer (99 $/an)
+npx eas-cli@latest build --platform ios --profile preview
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Pour publier sur les stores : `--profile production` puis `npx eas-cli@latest submit`.
+Google Play : 25 $ une seule fois. App Store : 99 $/an.
 
-### Other setup steps
+## Commandes utiles
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm test            # tests du moteur de correction
+npm run typecheck   # vérification TypeScript
+npx expo lint
+npm run build:data  # régénère assets/quran.json depuis data/tanzil
+bash scripts/convert-model.sh   # régénère le modèle vocal depuis Hugging Face
+```
 
-## Learn more
+## Arborescence
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+src/app/index.tsx            liste des sourates + « Reprendre »
+src/app/recite/[surah].tsx   écran de récitation
+src/app/about.tsx            à propos, sources, licences
+src/lib/matcher.ts           alignement entendu / attendu
+src/lib/arabic.ts            normalisation de l'arabe
+src/lib/recognizer.ts        micro + reconnaissance sur le téléphone
+src/lib/quran.ts             accès au texte
+assets/quran.json            texte généré (6236 versets)
+assets/models/               modèle vocal + détection de voix
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Limites connues (V1)
 
-## Join the community
+- On choisit la sourate et le verset de départ (pas encore de détection automatique de l'endroit).
+- Les erreurs fines de tajwid / harakat ne sont pas détectées : on compare les mots.
+- Le modèle peut se tromper dans le bruit : un mot « à revoir » n'est pas forcément une faute.
+- Le premier lancement prend quelques secondes (chargement du modèle).
 
-Join our community of developers creating universal apps.
+## Licences
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Texte : Tanzil Project — tanzil.net (CC BY 3.0, copie verbatim). Modèle : Tarteel AI (Apache-2.0).
+whisper.cpp / whisper.rn : MIT. Silero VAD : MIT. Police Amiri Quran : SIL OFL 1.1.

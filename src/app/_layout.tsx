@@ -1,18 +1,25 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { Colors } from '@/constants/theme';
 
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const c = Colors[scheme];
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+    <ThemeProvider
+      value={{
+        ...base,
+        colors: { ...base.colors, background: c.background, card: c.background, text: c.text, primary: c.accent, border: c.border },
+      }}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShadowVisible: false, headerTintColor: c.accent, headerTitleStyle: { color: c.text } }}>
+        <Stack.Screen name="index" options={{ title: 'Sourates', headerLargeTitle: true }} />
+        <Stack.Screen name="recite/[surah]" options={{ title: '' }} />
+        <Stack.Screen name="about" options={{ title: 'À propos', presentation: 'modal' }} />
+      </Stack>
     </ThemeProvider>
   );
 }

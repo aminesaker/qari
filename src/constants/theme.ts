@@ -1,65 +1,39 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
- */
-
-import '@/global.css';
-
 import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#1B1B18',
+    textSecondary: '#6B6A63',
+    background: '#FAF7F0',
+    card: '#FFFFFF',
+    border: '#E7E1D3',
+    accent: '#0F6B4F',
+    accentSoft: '#DCEFE6',
+    correct: '#11865F',
+    wrong: '#C8352E',
+    skipped: '#C77A00',
+    current: '#F1E6C4',
+    hidden: '#E7E1D3',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#F2EFE6',
+    textSecondary: '#A6A398',
+    background: '#121411',
+    card: '#1C1F1B',
+    border: '#2C302A',
+    accent: '#3DBB8A',
+    accentSoft: '#1D3A2F',
+    correct: '#4CCB95',
+    wrong: '#FF6B61',
+    skipped: '#F2A93B',
+    current: '#3A3524',
+    hidden: '#2C302A',
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type Palette = { [K in keyof typeof Colors.light]: string };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+/** Police coranique (Amiri Quran, licence OFL), intégrée au build par expo-font. */
+export const QuranFont = Platform.select({ ios: 'Amiri Quran', default: 'AmiriQuran-Regular' });
 
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const Spacing = { one: 4, two: 8, three: 16, four: 24, five: 32 } as const;

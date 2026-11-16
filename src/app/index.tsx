@@ -1,98 +1,116 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Link, Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { QuranFont, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { skeleton } from '@/lib/arabic';
+import { LAST_KEY } from '@/lib/storage';
+import { getSurah, revelationLabel, SURAHS, type Surah } from '@/lib/quran';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+export default function SurahList() {
+  const c = useTheme();
+  const [query, setQuery] = useState('');
+  const [last, setLast] = useState<{ surah: number; ayah: number } | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem(LAST_KEY)
+        .then((v) => setLast(v ? JSON.parse(v) : null))
+        .catch(() => {});
+    }, []),
+  );
+
+  const list = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return SURAHS;
+    const qAr = skeleton(q);
+    return SURAHS.filter(
+      (s) =>
+        String(s.n) === q ||
+        s.tname.toLowerCase().replace(/[^a-z]/g, '').includes(q.replace(/[^a-z]/g, '') || '\u0000') ||
+        (qAr.length > 0 && skeleton(s.name).includes(qAr)),
     );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+  }, [query]);
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Link href="/about" asChild>
+              <Pressable hitSlop={12}>
+                <Text style={{ color: c.accent, fontSize: 16 }}>À propos</Text>
+              </Pressable>
+            </Link>
+          ),
+        }}
+      />
+      <FlatList
+        style={{ backgroundColor: c.background }}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        data={list}
+        keyExtractor={(s) => String(s.n)}
+        ListHeaderComponent={
+          <View style={{ gap: Spacing.three, paddingBottom: Spacing.two }}>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Rechercher (nom ou numéro)"
+              placeholderTextColor={c.textSecondary}
+              style={[styles.search, { backgroundColor: c.card, borderColor: c.border, color: c.text }]}
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
+            {last && !query ? (
+              <Link href={{ pathname: '/recite/[surah]', params: { surah: last.surah, ayah: last.ayah } }} asChild>
+                <Pressable style={[styles.resume, { backgroundColor: c.accent }]}>
+                  <Text style={styles.resumeLabel}>Reprendre</Text>
+                  <Text style={styles.resumeText}>
+                    {getSurah(last.surah).tname} · verset {last.ayah}
+                  </Text>
+                </Pressable>
+              </Link>
+            ) : null}
+          </View>
+        }
+        contentContainerStyle={{ padding: Spacing.three, gap: Spacing.two }}
+        renderItem={({ item }) => <SurahRow surah={item} />}
+      />
+    </>
   );
 }
 
-export default function HomeScreen() {
+function SurahRow({ surah }: { surah: Surah }) {
+  const c = useTheme();
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <Link href={{ pathname: '/recite/[surah]', params: { surah: surah.n } }} asChild>
+      <Pressable style={({ pressed }) => [styles.row, { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.7 : 1 }]}>
+        <View style={[styles.badge, { backgroundColor: c.accentSoft }]}>
+          <Text style={{ color: c.accent, fontWeight: '700' }}>{surah.n}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.tname, { color: c.text }]}>{surah.tname}</Text>
+          <Text style={{ color: c.textSecondary, fontSize: 13 }}>
+            {revelationLabel(surah.type)} · {surah.ayahs.length} versets
+          </Text>
+        </View>
+        <Text style={[styles.arabic, { color: c.text }]}>{surah.name}</Text>
+      </Pressable>
+    </Link>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  search: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
+  resume: { borderRadius: 14, padding: Spacing.three },
+  resumeLabel: { color: '#fff', opacity: 0.85, fontSize: 13, fontWeight: '600' },
+  resumeText: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderWidth: 1, borderRadius: 14, padding: 14 },
+  badge: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  tname: { fontSize: 17, fontWeight: '600' },
+  arabic: { fontFamily: QuranFont, fontSize: 24 },
 });
+
